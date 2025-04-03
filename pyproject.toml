@@ -1,0 +1,22 @@
+[project]
+name = "sftp_transfer"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "leeway.zlw", email = "leeway.zlw@outlook.com"},
+]
+dependencies = ["paramiko>=3.5.1", "tqdm>=4.67.1", "colorlog>=6.9.0"]
+requires-python = ">=3.10"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true
+
+[project.scripts]
+sftp_transfer = "sftp_transfer:main"
