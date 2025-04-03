@@ -169,7 +169,7 @@ def main():
     args = build_args()
     PipeProcessor()\
         .input(traverse(args))\
-        .pipe(worker_fn=sync_file, args=(args,), num_workers=args.num_workers, inq_size=args.batch_size * args.num_workers, batch_size=args.batch_size, name="Sync Files")\
+        .pipe(worker_fn=sync_file, mode="process", args=(args,), num_workers=args.num_workers, inq_size=args.batch_size * args.num_workers, batch_size=args.batch_size, name="Sync Files")\
         .start().join()
 
 if __name__ == "__main__":
