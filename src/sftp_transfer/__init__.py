@@ -148,16 +148,16 @@ def traverse(args):
                     dest_sftp.stat(d)
                 except FileNotFoundError:
                     dest_sftp.mkdir(d)
-                # if os.path.basename(d) not in dest_sftp.listdir(os.path.dirname(d)):
-                    # dest_sftp.mkdir(d)
-            for item in source_sftp.listdir_attr(s):
-                s_item = os.path.join(s, item.filename)
-                d_item = os.path.join(d, item.filename)
-                if item.st_mode & 0o40000:
-                    stack.append((s_item, d_item))
-                else:
-                    pbar.update(1)
-                    yield s_item, d_item
+                for item in source_sftp.listdir_attr(s):
+                    s_item = os.path.join(s, item.filename)
+                    d_item = os.path.join(d, item.filename)
+                    if item.st_mode & 0o40000:
+                        stack.append((s_item, d_item))
+                    else:
+                        pbar.update(1)
+                        yield s_item, d_item
+            else:
+                yield s, d
     except Exception as e:
         logger.error(f"Error traversing directory {s}: {e}")
         logger.exception(e)
