@@ -31,7 +31,12 @@ ENV DESTINATION_HOST=""
 ENV DESTINATION_PORT=22
 ENV DESTINATION_USER=""
 ENV DESTINATION_PASSWORD=""
+ENV DESTINATION_PATH=""
 ENV NUM_WORKERS=8
 ENV BATCH_SIZE=1
 
-CMD [ "sftp_transfer", "-sh", ${SOURCE_HOST}, "-sp", ${SOURCE_PORT}, "-su", ${SOURCE_USER}, "-sp", ${SOURCE_PASSWORD}, "-sp", ${SOURCE_PATH}, "-dh", ${DESTINATION_HOST}, "-dp", ${DESTINATION_PORT}, "-du", ${DESTINATION_USER}, "-dp", ${DESTINATION_PASSWORD}, "-nw", ${NUM_WORKERS}, "-bs", ${BATCH_SIZE} ]
+WORKDIR /app
+
+COPY "entrypoint.sh" "/app/entrypoint.sh"
+
+CMD [ "/app/entrypoint.sh" ]
