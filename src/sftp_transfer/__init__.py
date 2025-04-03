@@ -14,15 +14,15 @@ logger = get_logger(__name__, level=logging.DEBUG if "DEBUG" in os.environ else 
 
 def build_args():
     parser = argparse.ArgumentParser(description="SFTP Transfer")
-    parser.add_argument("-sh", "--source-host", required=True, type=str, help="Source host")
+    parser.add_argument("-sh", "--source-host", type=str, help="Source host")
     parser.add_argument("-sp", "--source-port", type=int, default=22, help="Source port")
-    parser.add_argument("-su", "--source-user", required=True, type=str, help="Source user")
-    parser.add_argument("-spw", "--source-password", required=True, type=str, help="Source password")
+    parser.add_argument("-su", "--source-user", type=str, help="Source user")
+    parser.add_argument("-spw", "--source-password", type=str, help="Source password")
 
-    parser.add_argument("-dh", "--dest-host", required=True, type=str, help="Target host")
+    parser.add_argument("-dh", "--dest-host", type=str, help="Target host")
     parser.add_argument("-dp", "--dest-port", type=int, default=22, help="Target port")
-    parser.add_argument("-du", "--dest-user", required=True, type=str, help="Target user")
-    parser.add_argument("-dpw", "--dest-password", required=True, type=str, help="Target password")
+    parser.add_argument("-du", "--dest-user", type=str, help="Target user")
+    parser.add_argument("-dpw", "--dest-password", type=str, help="Target password")
     parser.add_argument("-sf", "--source-path", required=True, type=str, help="Source path")
     parser.add_argument("-df", "--dest-path", required=True, type=str, help="Target path")
     parser.add_argument("--num-workers", type=int, default=8)
@@ -30,8 +30,41 @@ def build_args():
     args = parser.parse_args()
     return args
 
+def get_local_mock_sftp_connection():
+    class MockSFTPAttributes:
+        def __init__(self, entry: os.DirEntry):
+            self.name = entry.name
+            self.st_mode = entry.stat().st_mode
+            self.path = entry.path
+
+        @property
+        def filename(self):
+            return self.name
+        
+        def __str__(self):
+            return self.path
+
+    class MockSFTP:
+        def stat(self, path):
+            return os.stat(path)
+            
+        def open(self, path, mode='r', *args, **kwargs):
+            return open(path, mode, *args, **kwargs)
+            
+        def mkdir(self, path):
+            return os.mkdir(path)
+            
+        def listdir_attr(self, path):
+            return map(MockSFTPAttributes, os.scandir(path))
+            
+        def close(self):
+            pass
+            
+    return MockSFTP()
 
 def get_sftp_connection(host, port, username, password):
+    if not host or port is None or username is None:
+        return get_local_mock_sftp_connection()
     transport = paramiko.Transport((host, port))
     transport.connect(username=username, password=password)
     return paramiko.SFTPClient.from_transport(transport)
@@ -55,13 +88,13 @@ def sync_file(tasks, args):
     for source_path, dest_path in tasks:
         try:
             source_stat = source_sftp.stat(source_path)
-            if os.path.basename(dest_path) in dest_sftp.listdir(os.path.dirname(dest_path)):
+            try:
                 dest_stat = dest_sftp.stat(dest_path)
                 if dest_stat.st_size == source_stat.st_size:
                     logger.debug(f"File {source_path} already synced.")
                     return True
                 start_byte = dest_stat.st_size
-            else:
+            except FileNotFoundError:
                 start_byte = 0
 
             total_size = source_stat.st_size - start_byte
@@ -103,8 +136,12 @@ def traverse(args):
             s_stat = source_sftp.stat(s)
             if s_stat.st_mode & 0o40000:
                 # Directory
-                if os.path.basename(d) not in dest_sftp.listdir(os.path.dirname(d)):
+                try:
+                    dest_sftp.stat(d)
+                except FileNotFoundError:
                     dest_sftp.mkdir(d)
+                # if os.path.basename(d) not in dest_sftp.listdir(os.path.dirname(d)):
+                    # dest_sftp.mkdir(d)
             for item in source_sftp.listdir_attr(s):
                 s_item = os.path.join(s, item.filename)
                 d_item = os.path.join(d, item.filename)
