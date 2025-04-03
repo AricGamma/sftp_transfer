@@ -85,32 +85,39 @@ def sync_file(tasks, args):
     if not isinstance(tasks, list):
         tasks = [tasks]
 
-    for source_path, dest_path in tasks:
-        try:
-            source_stat = source_sftp.stat(source_path)
+    try:
+        for source_path, dest_path in tasks:
             try:
-                dest_stat = dest_sftp.stat(dest_path)
-                if dest_stat.st_size == source_stat.st_size:
-                    logger.debug(f"File {source_path} already synced.")
-                    return True
-                start_byte = dest_stat.st_size
-            except FileNotFoundError:
-                start_byte = 0
+                source_stat = source_sftp.stat(source_path)
+                try:
+                    dest_stat = dest_sftp.stat(dest_path)
+                    if dest_stat.st_size == source_stat.st_size:
+                        logger.debug(f"File {source_path} already synced.")
+                        return True
+                    start_byte = dest_stat.st_size
+                except FileNotFoundError:
+                    start_byte = 0
 
-            total_size = source_stat.st_size - start_byte
-            with source_sftp.open(source_path, 'rb') as source_file:
-                source_file.seek(start_byte)
-                with dest_sftp.open(dest_path, 'ab') as dest_file:
-                    with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Syncing {os.path.basename(source_path)}") as pbar:
-                        while True:
-                            data = source_file.read(4096)
-                            if not data:
-                                break
-                            dest_file.write(data)
-                            pbar.update(len(data))
-        except Exception as e:
-            logger.error(f"Error syncing file {source_path}: {e}")
-            logger.exception(e)
+                total_size = source_stat.st_size - start_byte
+                with source_sftp.open(source_path, 'rb') as source_file:
+                    source_file.seek(start_byte)
+                    with dest_sftp.open(dest_path, 'ab') as dest_file:
+                        with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Syncing {os.path.basename(source_path)}") as pbar:
+                            while True:
+                                data = source_file.read(4096)
+                                if not data:
+                                    break
+                                dest_file.write(data)
+                                pbar.update(len(data))
+            except Exception as e:
+                logger.error(f"Error syncing file {source_path}: {e}")
+                logger.exception(e)
+    except Exception as ex:
+        logger.error(f"Error syncing files: {ex}")
+        logger.exception(ex)
+    finally:
+        source_sftp.close()
+        dest_sftp.close()
 
 def traverse(args):
     source_host = args.source_host
