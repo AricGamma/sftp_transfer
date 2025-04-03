@@ -2,8 +2,6 @@
 import argparse
 import logging
 import os
-import traceback
-import concurrent.futures
 
 import paramiko
 from tqdm import tqdm
