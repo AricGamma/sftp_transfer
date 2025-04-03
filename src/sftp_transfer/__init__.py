@@ -137,6 +137,7 @@ def traverse(args):
     stack = []
     stack.append((source_path, dest_path))
 
+    pbar = tqdm(desc="Traversing directory")
     try:
         while len(stack) > 0:
             s, d = stack.pop()
@@ -155,6 +156,7 @@ def traverse(args):
                 if item.st_mode & 0o40000:
                     stack.append((s_item, d_item))
                 else:
+                    pbar.update(1)
                     yield s_item, d_item
     except Exception as e:
         logger.error(f"Error traversing directory {s}: {e}")
